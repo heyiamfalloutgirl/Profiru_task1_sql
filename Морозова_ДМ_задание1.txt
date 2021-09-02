@@ -1,0 +1,62 @@
+Задание 1
+
+Команды - таблица **teams**:
+- **id** int (уникальный идентификатор команды)
+- **name** varchar(32) (название команды)
+- **games_played** smallint (сыграно матчей на турнире)
+- **goals** smallint (забито голов)
+- **goals_minus** smallint (пропущено голов)
+- **yellow_cards** smallint (желтые карточки)
+- **red_cards** smallint (красные карточки)
+
+Игроки - табличка **players_stat**:
+- **id** int (уникальный идентификатор игрока)
+- **name** varchar(32) (имя игрока)
+- **team_id** int (id команды, за которую выступает игрок)
+- **position** varchar(8) (позиция игрока; возможные значения – ‘GK’, ‘DF’, ‘MD’, ‘AT’)
+- **age** smallint (возраст игрока)
+- **min_played** int (сыграно минут на турнире)
+- **goals** smallint (забито голов)
+- **yellow_cards** smallint (жёлтые карточки)
+- **red_cards** smallint (красные карточки)
+
+1. В каких командах есть вратари (‘GK’), получавшие карточки на турнире?
+SELECT DISTINCT
+	t.name as team_name
+FROM teams as t
+JOIN players_stats as ps
+ON t.id = ps.team_id
+WHERE ps.position = 'GK' AND (ps.yellow_cards != 0 OR ps.red_cards != 0);
+
+
+2. Каков 90-ый перцентиль возраста игроков, сыгравших на турнире не менее 270 минут?
+SELECT DISTINCT first_value(ps.age) OVER (
+  ORDER BY CASE WHEN p <= 0.9 THEN p END DESC
+) x,
+FROM (
+  SELECT
+    ps.age,
+    percent_rank() OVER (ORDER BY ps.age) p
+  FROM players_stat as ps
+  WHERE ps.min_played >= 270
+) t;
+
+
+3. В каких командах голы на турнире забивали только нападающие ('AT')?
+SELECT DISTINCT
+	t.name as team_name
+FROM teams as t
+JOIN players_stats as ps
+ON t.id = ps.team_id
+WHERE (position='AT' AND goals!=0) AND (position='GK' AND goals=0)
+AND (position='DF' AND goals=0) AND (position='MD' AND goals=0);
+
+
+4. Представители какой команды чаще других получали желтые карточки во время игр?
+SELECT
+    name, 
+    SUM(yellow_cards) as cnt
+FROM teams
+GROUP BY name
+ORDER BY cnt DESC
+LIMIT 1;
